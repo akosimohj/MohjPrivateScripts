@@ -1,18 +1,26 @@
--- [[ MOHJ HUB: SOLO HUNTERS PRIVATE SUITE ]]
+-- [[ MOHJ HUB: AUTO-REFRESH & COMBAT FIX ]]
 repeat task.wait() until game:IsLoaded()
 
+-- 1. AUTO-UNLOAD: Cleans up old versions before loading new ones
+local oldUI = game.CoreGui:FindFirstChild("MohjHub_UI")
+if oldUI then
+    _G.MohjRunning = false -- Kill old script loops
+    oldUI:Destroy() -- Delete old menu
+    task.wait(0.1)
+end
+
+-- GUI SETTINGS
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local UIListLayout = Instance.new("UIListLayout")
 
--- GUI SETTINGS
 ScreenGui.Name = "MohjHub_UI"
 ScreenGui.Parent = game.CoreGui
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 200, 0, 360)
+MainFrame.Size = UDim2.new(0, 200, 0, 310)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
@@ -28,12 +36,11 @@ UIListLayout.Padding = UDim.new(0, 5)
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Global States
+-- Global State Management
 _G.MohjRunning = true
 local killaura = false
 local noclip = false
 local infjump = false
-local autoloot = false
 
 local function createBtn(text, color)
     local b = Instance.new("TextButton")
@@ -45,7 +52,7 @@ local function createBtn(text, color)
     return b
 end
 
--- 1. SPEED TOGGLE
+-- 1. SPEED BUTTON
 local sBtn = createBtn("Speed: OFF")
 sBtn.MouseButton1Click:Connect(function()
     local hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -54,7 +61,7 @@ sBtn.MouseButton1Click:Connect(function()
     sBtn.BackgroundColor3 = (hum.WalkSpeed == 100) and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
 end)
 
--- 2. INF JUMP TOGGLE
+-- 2. INF JUMP BUTTON
 local jBtn = createBtn("Inf Jump: OFF")
 jBtn.MouseButton1Click:Connect(function()
     infjump = not infjump
@@ -69,7 +76,7 @@ game:GetService("UserInputService").JumpRequest:Connect(function()
     end
 end)
 
--- 3. NOCLIP TOGGLE
+-- 3. NOCLIP BUTTON
 local nBtn = createBtn("NoClip: OFF")
 nBtn.MouseButton1Click:Connect(function()
     noclip = not noclip
@@ -85,7 +92,7 @@ game:GetService("RunService").Stepped:Connect(function()
     end
 end)
 
--- 4. KILL AURA (Based on GotHit Remote)
+-- 4. NEW KILL AURA (Based on GotHit Remote & Log Image)
 local kaBtn = createBtn("Kill Aura: OFF")
 kaBtn.MouseButton1Click:Connect(function()
     killaura = not killaura
@@ -96,12 +103,17 @@ kaBtn.MouseButton1Click:Connect(function()
         local remote = game:GetService("ReplicatedStorage"):FindFirstChild("GotHit", true)
         while killaura and _G.MohjRunning do
             local char = game.Players.LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                for _, v in pairs(game.Workspace:GetChildren()) do
-                    if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v ~= char then
-                        local dist = (char.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                        if dist < 25 and remote then
-                            remote:FireServer(v, "Weapon_DualDaggers")
+            if char then
+                -- Broad search for Mobs/Enemies in workspace
+                for _, mob in pairs(game.Workspace:GetDescendants()) do
+                    if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob ~= char then
+                        local root = mob:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            local dist = (char.HumanoidRootPart.Position - root.Position).Magnitude
+                            if dist < 30 and remote then
+                                -- Arguments from your log image
+                                remote:FireServer(mob, "Weapon_DualDaggers")
+                            end
                         end
                     end
                 end
@@ -111,33 +123,7 @@ kaBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- 5. AUTO-LOOT MAGNET
-local lBtn = createBtn("Auto Loot: OFF")
-lBtn.MouseButton1Click:Connect(function()
-    autoloot = not autoloot
-    lBtn.Text = "Auto Loot: " .. (autoloot and "ON" or "OFF")
-    lBtn.BackgroundColor3 = autoloot and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
-    
-    task.spawn(function()
-        while autoloot and _G.MohjRunning do
-            local char = game.Players.LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                for _, v in pairs(game.Workspace:GetChildren()) do
-                    -- Checks for common Solo Hunter drops
-                    if v.Name == "Gem" or v.Name == "Gold" or v.Name == "Coin" or v.Name:find("Ore") then
-                        if v:IsA("BasePart") then
-                            v.CFrame = char.HumanoidRootPart.CFrame
-                            v.CanCollide = false
-                        end
-                    end
-                end
-            end
-            task.wait(0.3)
-        end
-    end)
-end)
-
--- 6. UNLOAD HUB
+-- 5. UNLOAD BUTTON
 local uBtn = createBtn("UNLOAD HUB", Color3.fromRGB(50, 50, 50))
 uBtn.MouseButton1Click:Connect(function()
     _G.MohjRunning = false
