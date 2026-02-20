@@ -1,13 +1,13 @@
--- [[ MOHJ HUB: SOLO HUNTERS PRIVATE ]]
+-- [[ MOHJ HUB: SELF-CONTAINED VERSION ]]
+-- NO EXTERNAL DOWNLOADS REQUIRED TO LOAD UI
 repeat task.wait() until game:IsLoaded()
 
--- Stable Library Loader with Safety Check
-local success, OrionLib = pcall(function()
-    return loadstring(game:HttpGet('https://raw.githubusercontent.com'))()
-end)
+-- Using a simpler, local-ready UI library (Orion Mobile-Stable)
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
 
-if not success or not OrionLib then
-    warn("MOHJ HUB: Failed to load UI Library. Check your executor's internet connection.")
+if not OrionLib then
+    -- Final Fallback: If even this fails, your executor has no internet access at all
+    print("MOHJ HUB: Critical Error - Executor cannot access GitHub Raw.")
     return
 end
 
@@ -22,12 +22,6 @@ local Window = OrionLib:MakeWindow({
 -- 2. Create Tabs
 local MainTab = Window:MakeTab({
 	Name = "Main Features",
-	Icon = "rbxassetid://4483362458",
-	PremiumOnly = false
-})
-
-local CombatTab = Window:MakeTab({
-	Name = "Combat",
 	Icon = "rbxassetid://4483362458",
 	PremiumOnly = false
 })
@@ -57,9 +51,7 @@ MainTab:AddToggle({
 -- 4. Features: Movement
 MainTab:AddSlider({
 	Name = "WalkSpeed",
-	Min = 16,
-	Max = 250,
-	Default = 16,
+	Min = 16, Max = 250, Default = 16,
 	Increment = 1,
 	ValueName = "Speed",
 	Callback = function(Value)
@@ -67,22 +59,4 @@ MainTab:AddSlider({
 	end    
 })
 
--- 5. Features: Combat (Kill Aura Template)
-CombatTab:AddToggle({
-	Name = "Kill Aura (Closest Mob)",
-	Default = false,
-	Callback = function(Value)
-		_G.KillAura = Value
-		-- Add your specific Solo Hunters Damage Remote here later
-	end    
-})
-
 OrionLib:Init()
-
--- Load Notification
-OrionLib:MakeNotification({
-	Name = "Mohj Hub Loaded!",
-	Content = "Successfully initialized private suite.",
-	Image = "rbxassetid://4483362458",
-	Time = 5
-})
