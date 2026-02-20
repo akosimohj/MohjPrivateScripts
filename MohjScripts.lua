@@ -1,11 +1,11 @@
--- [[ MOHJ HUB: AUTO-REFRESH & COMBAT FIX ]]
+-- [[ MOHJ HUB: COMBAT & GOD MODE ONLY ]]
 repeat task.wait() until game:IsLoaded()
 
--- 1. AUTO-UNLOAD: Cleans up old versions before loading new ones
+-- 1. AUTO-REFRESH: Automatically unloads old script before loading new one
 local oldUI = game.CoreGui:FindFirstChild("MohjHub_UI")
 if oldUI then
-    _G.MohjRunning = false -- Kill old script loops
-    oldUI:Destroy() -- Delete old menu
+    _G.MohjRunning = false 
+    oldUI:Destroy()
     task.wait(0.1)
 end
 
@@ -36,11 +36,9 @@ UIListLayout.Padding = UDim.new(0, 5)
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Global State Management
+-- States
 _G.MohjRunning = true
-local killaura = false
-local noclip = false
-local infjump = false
+local killaura, godmode, noclip = false, false, false
 
 local function createBtn(text, color)
     local b = Instance.new("TextButton")
@@ -52,31 +50,53 @@ local function createBtn(text, color)
     return b
 end
 
--- 1. SPEED BUTTON
-local sBtn = createBtn("Speed: OFF")
-sBtn.MouseButton1Click:Connect(function()
-    local hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-    hum.WalkSpeed = (hum.WalkSpeed == 16) and 100 or 16
-    sBtn.Text = "Speed: " .. (hum.WalkSpeed == 100 and "100" or "OFF")
-    sBtn.BackgroundColor3 = (hum.WalkSpeed == 100) and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
+-- 2. KILL AURA (Fixed with Exact Log Arguments)
+local kaBtn = createBtn("Kill Aura: OFF")
+kaBtn.MouseButton1Click:Connect(function()
+    killaura = not killaura
+    kaBtn.Text = "Kill Aura: " .. (killaura and "ON" or "OFF")
+    kaBtn.BackgroundColor3 = killaura and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
+    
+    task.spawn(function()
+        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("GotHit", true)
+        while killaura and _G.MohjRunning do
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                for _, mob in pairs(game.Workspace:GetDescendants()) do
+                    -- Identify Mobs: Must be a model with a living humanoid
+                    if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob ~= char then
+                        local root = mob:FindFirstChild("HumanoidRootPart")
+                        if root and (char.HumanoidRootPart.Position - root.Position).Magnitude < 35 then
+                            if remote then 
+                                -- EXACT ARGUMENTS FROM YOUR LOG IMAGE
+                                remote:FireServer(mob, "Weapon_DualDaggers", 0, "go hide it or smth") 
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(0.1) -- Rapid Attack Speed
+        end
+    end)
 end)
 
--- 2. INF JUMP BUTTON
-local jBtn = createBtn("Inf Jump: OFF")
-jBtn.MouseButton1Click:Connect(function()
-    infjump = not infjump
-    jBtn.Text = "Inf Jump: " .. (infjump and "ON" or "OFF")
-    jBtn.BackgroundColor3 = infjump and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
+-- 3. GOD MODE (Local Health Lock)
+local gBtn = createBtn("God Mode: OFF")
+gBtn.MouseButton1Click:Connect(function()
+    godmode = not godmode
+    gBtn.Text = "God Mode: " .. (godmode and "ON" or "OFF")
+    gBtn.BackgroundColor3 = godmode and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
+    
+    task.spawn(function()
+        while godmode and _G.MohjRunning do
+            local hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+            if hum then hum.Health = hum.MaxHealth end
+            task.wait(0.1)
+        end
+    end)
 end)
 
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if infjump and _G.MohjRunning then
-        local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')
-        if hum then hum:ChangeState("Jumping") end
-    end
-end)
-
--- 3. NOCLIP BUTTON
+-- 4. NOCLIP
 local nBtn = createBtn("NoClip: OFF")
 nBtn.MouseButton1Click:Connect(function()
     noclip = not noclip
@@ -92,38 +112,7 @@ game:GetService("RunService").Stepped:Connect(function()
     end
 end)
 
--- 4. NEW KILL AURA (Based on GotHit Remote & Log Image)
-local kaBtn = createBtn("Kill Aura: OFF")
-kaBtn.MouseButton1Click:Connect(function()
-    killaura = not killaura
-    kaBtn.Text = "Kill Aura: " .. (killaura and "ON" or "OFF")
-    kaBtn.BackgroundColor3 = killaura and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
-    
-    task.spawn(function()
-        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("GotHit", true)
-        while killaura and _G.MohjRunning do
-            local char = game.Players.LocalPlayer.Character
-            if char then
-                -- Broad search for Mobs/Enemies in workspace
-                for _, mob in pairs(game.Workspace:GetDescendants()) do
-                    if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob ~= char then
-                        local root = mob:FindFirstChild("HumanoidRootPart")
-                        if root then
-                            local dist = (char.HumanoidRootPart.Position - root.Position).Magnitude
-                            if dist < 30 and remote then
-                                -- Arguments from your log image
-                                remote:FireServer(mob, "Weapon_DualDaggers")
-                            end
-                        end
-                    end
-                end
-            end
-            task.wait(0.1)
-        end
-    end)
-end)
-
--- 5. UNLOAD BUTTON
+-- 5. UNLOAD HUB
 local uBtn = createBtn("UNLOAD HUB", Color3.fromRGB(50, 50, 50))
 uBtn.MouseButton1Click:Connect(function()
     _G.MohjRunning = false
