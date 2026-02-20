@@ -1,13 +1,9 @@
--- [[ MOHJ HUB: ULTIMATE GHOST SHIELD UPDATE ]]
+-- [[ MOHJ HUB: REMOTE-BLOCKER GOD MODE ]]
 repeat task.wait() until game:IsLoaded()
 
--- 1. AUTO-REFRESH: Cleans old versions
+-- 1. AUTO-REFRESH
 local oldUI = game.CoreGui:FindFirstChild("MohjHub_UI")
-if oldUI then
-    _G.MohjRunning = false 
-    oldUI:Destroy()
-    task.wait(0.1)
-end
+if oldUI then _G.MohjRunning = false oldUI:Destroy() task.wait(0.1) end
 
 -- GUI SETTINGS
 local ScreenGui = Instance.new("ScreenGui")
@@ -50,34 +46,33 @@ local function createBtn(text, color)
     return b
 end
 
--- 2. GHOST SHIELD GOD MODE (Advanced Desync)
+-- 2. REMOTE-BLOCKER GOD MODE
 local gBtn = createBtn("God Mode: OFF")
 gBtn.MouseButton1Click:Connect(function()
     godmode = not godmode
     gBtn.Text = "God Mode: " .. (godmode and "ON" or "OFF")
     gBtn.BackgroundColor3 = godmode and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
     
-    task.spawn(function()
-        local player = game.Players.LocalPlayer
-        while godmode and _G.MohjRunning do
-            local char = player.Character
-            if char and char:FindFirstChild("Humanoid") then
-                -- Method: Force Health to Max every frame
-                char.Humanoid.Health = char.Humanoid.MaxHealth
-                
-                -- Desync: If health drops even slightly, it "Glitches" you away for 1 frame
-                char.Humanoid.HealthChanged:Connect(function(newHealth)
-                    if godmode and newHealth < char.Humanoid.MaxHealth then
-                        char.Humanoid.Health = char.Humanoid.MaxHealth
-                    end
-                end)
+    -- This "Metatable Hook" blocks the GotHit remote if it targets YOU
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    local oldNamecall = mt.__namecall
+    
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        if godmode and tostring(self) == "GotHit" and method == "FireServer" then
+            -- If the first argument is your character, BLOCK IT
+            if args[1] == game.Players.LocalPlayer.Character then
+                return nil
             end
-            task.wait() -- Fires as fast as the game allows
         end
+        return oldNamecall(self, ...)
     end)
 end)
 
--- 3. KILL AURA (Exact Log Arguments)
+-- 3. KILL AURA (Fires GotHit at others)
 local kaBtn = createBtn("Kill Aura: OFF")
 kaBtn.MouseButton1Click:Connect(function()
     killaura = not killaura
@@ -94,7 +89,6 @@ kaBtn.MouseButton1Click:Connect(function()
                         local root = mob:FindFirstChild("HumanoidRootPart")
                         if root and (char.HumanoidRootPart.Position - root.Position).Magnitude < 35 then
                             if remote then 
-                                -- Using the secret arguments from your logs
                                 remote:FireServer(mob, "Weapon_DualDaggers", 0, "go hide it or smth") 
                             end
                         end
@@ -115,7 +109,7 @@ sBtn.MouseButton1Click:Connect(function()
     sBtn.BackgroundColor3 = (hum.WalkSpeed == 100) and Color3.fromRGB(0, 130, 0) or Color3.fromRGB(130, 0, 0)
 end)
 
--- 5. UNLOAD BUTTON
+-- 5. UNLOAD HUB
 local uBtn = createBtn("UNLOAD HUB", Color3.fromRGB(50, 50, 50))
 uBtn.MouseButton1Click:Connect(function()
     _G.MohjRunning = false
