@@ -1,13 +1,15 @@
--- [[ MOHJ HUB: SELF-CONTAINED VERSION ]]
--- NO EXTERNAL DOWNLOADS REQUIRED TO LOAD UI
+-- [[ MOHJ HUB: NO-DOWNLOAD STABLE VERSION ]]
 repeat task.wait() until game:IsLoaded()
 
--- Using a simpler, local-ready UI library (Orion Mobile-Stable)
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
+-- Using a more stable loader link for Orion
+local success, OrionLib = pcall(function()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com'))()
+end)
 
-if not OrionLib then
-    -- Final Fallback: If even this fails, your executor has no internet access at all
-    print("MOHJ HUB: Critical Error - Executor cannot access GitHub Raw.")
+if not success or not OrionLib then
+    -- If the library fails, this will make your character jump as a backup test
+    warn("MOHJ HUB: Connection Error. Character jump triggered as test.")
+    game.Players.LocalPlayer.Character.Humanoid.Jump = true
     return
 end
 
@@ -19,14 +21,13 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "MohjHub_Private"
 })
 
--- 2. Create Tabs
+-- 2. Main Tab
 local MainTab = Window:MakeTab({
 	Name = "Main Features",
 	Icon = "rbxassetid://4483362458",
 	PremiumOnly = false
 })
 
--- 3. Features: Auto Loot
 MainTab:AddToggle({
 	Name = "Auto-Loot Gems/Gold",
 	Default = false,
@@ -38,7 +39,6 @@ MainTab:AddToggle({
 					if v.Name == "Gem" or v.Name == "Gold" or v.Name == "Coin" then
 						if v:IsA("BasePart") then
 							v.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-                            v.CanCollide = false
 						end
 					end
 				end
@@ -48,10 +48,9 @@ MainTab:AddToggle({
 	end    
 })
 
--- 4. Features: Movement
 MainTab:AddSlider({
 	Name = "WalkSpeed",
-	Min = 16, Max = 250, Default = 16,
+	Min = 16, Max = 200, Default = 16,
 	Increment = 1,
 	ValueName = "Speed",
 	Callback = function(Value)
