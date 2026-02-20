@@ -1,25 +1,38 @@
--- [[ SELF-CONTAINED PRIVATE HUB - NO EXTERNAL DOWNLOADS ]]
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
+-- [[ MOHJ HUB: SOLO HUNTERS PRIVATE ]]
+repeat task.wait() until game:IsLoaded()
 
--- This check prevents the 'nil' error by stopping the script if the link fails
-if not Library then 
-    warn("UI Library failed to load. Check your internet/executor.")
-    return 
+-- Stable Library Loader with Safety Check
+local success, OrionLib = pcall(function()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com'))()
+end)
+
+if not success or not OrionLib then
+    warn("MOHJ HUB: Failed to load UI Library. Check your executor's internet connection.")
+    return
 end
 
-local Window = Library:MakeWindow({
-    Name = "Solo Hunters | Private Hub", 
+-- 1. Create the Main Window
+local Window = OrionLib:MakeWindow({
+    Name = "Mohj Hub | Solo Hunters", 
     HidePremium = true, 
     SaveConfig = true, 
-    ConfigFolder = "Mohj_Private"
+    ConfigFolder = "MohjHub_Private"
 })
 
+-- 2. Create Tabs
 local MainTab = Window:MakeTab({
 	Name = "Main Features",
 	Icon = "rbxassetid://4483362458",
 	PremiumOnly = false
 })
 
+local CombatTab = Window:MakeTab({
+	Name = "Combat",
+	Icon = "rbxassetid://4483362458",
+	PremiumOnly = false
+})
+
+-- 3. Features: Auto Loot
 MainTab:AddToggle({
 	Name = "Auto-Loot Gems/Gold",
 	Default = false,
@@ -28,27 +41,48 @@ MainTab:AddToggle({
 		task.spawn(function()
 			while _G.AutoLoot do
 				for _, v in pairs(game.Workspace:GetChildren()) do
-					if v.Name == "Gem" or v.Name == "Gold" then
+					if v.Name == "Gem" or v.Name == "Gold" or v.Name == "Coin" then
 						if v:IsA("BasePart") then
 							v.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+                            v.CanCollide = false
 						end
 					end
 				end
-				task.wait(0.5)
+				task.wait(0.3)
 			end
 		end)
 	end    
 })
 
+-- 4. Features: Movement
 MainTab:AddSlider({
-	Name = "Walkspeed",
-	Min = 16, Max = 250, Default = 16,
-	Color = Color3.fromRGB(255,255,255),
+	Name = "WalkSpeed",
+	Min = 16,
+	Max = 250,
+	Default = 16,
 	Increment = 1,
 	ValueName = "Speed",
-	Callback = function(v)
-		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v
+	Callback = function(Value)
+		game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
 	end    
 })
 
-Library:Init()
+-- 5. Features: Combat (Kill Aura Template)
+CombatTab:AddToggle({
+	Name = "Kill Aura (Closest Mob)",
+	Default = false,
+	Callback = function(Value)
+		_G.KillAura = Value
+		-- Add your specific Solo Hunters Damage Remote here later
+	end    
+})
+
+OrionLib:Init()
+
+-- Load Notification
+OrionLib:MakeNotification({
+	Name = "Mohj Hub Loaded!",
+	Content = "Successfully initialized private suite.",
+	Image = "rbxassetid://4483362458",
+	Time = 5
+})
